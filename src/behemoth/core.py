@@ -100,9 +100,9 @@ class BattleOrchestrator:
         if result and result.get('body'):
             try:
                 data = json.loads(result['body'])
-                self.berserker._harvert_intel(data)
+                self.berserker._harvest_intel(data)
             except:
-                self.berserker._harvert_intel(result['body'])
+                self.berserker._harvest_intel(result['body'])
 
         # 2. BERSERKER STRIKE
         hypothesis = plan.get('hypothesis', 'No hypothesis provided')
